@@ -1,0 +1,113 @@
+---
+title: "Final Project Interterm"
+date: "10/7/2020"
+output:
+  html_document:
+    highlight: zenburn
+    theme: flatly
+    toc: yes
+    toc_float: yes
+  toc: default
+authors: Conor McGrath, Tina Wang, Tiffany Tseng, Michael Mayor, Brock Gallagher
+---
+# Introduction
+
+Team Name: L1
+Team Members: Conor McGrath, Tina Wang, Tiffany Tseng, Michael Mayor, Brock Gallagher
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load Data sets
+
+```{r}
+library(tidyverse)
+Baseball2019 <- read.csv("./stats2019.csv")
+Baseball2020 <- read.csv("./stats2020.csv")
+```
+
+
+# Combine names columns for each table. 
+
+```{r}
+
+Baseball2019$Name <- paste(Baseball2019$first_name, Baseball2019$last_name, sep = ' ')
+
+Baseball2020$Name <- paste(Baseball2020$first_name, Baseball2020$last_name, sep = ' ')
+```
+
+# Create average HR per AB column
+
+```{r}
+Baseball2019$AvgHrPerAB <- round(Baseball2019$b_home_run / Baseball2019$b_ab, 2)
+
+Baseball2020$AvgHrPerAB <- round(Baseball2020$b_home_run / Baseball2020$b_ab, 2)
+```
+
+# Select necesarry columns
+
+```{r}
+Baseball2019 <- Baseball2019 %>%
+  select(Name, AvgHrPerAB, exit_velocity_avg, launch_angle_avg)
+
+Baseball2020 <- Baseball2020 %>%
+  select(Name, AvgHrPerAB, exit_velocity_avg, launch_angle_avg)
+```
+
+# Innerjoin on new player name column
+
+```{r}
+BaseballFinal <- inner_join(Baseball2019, Baseball2020, by = "Name")
+
+BaseballFinal <- BaseballFinal %>%
+  select(1, 2, 5, 3, 6, 4, 7)
+
+colnames(BaseballFinal) <- c("Name", "AvgHrPerAB2019", "AvgHrPerAB2020", "EV2019", "EV2020", "LA2019", "LA2020")
+
+```
+
+
+# Create column with difference in EV and LA from 2019 to 2020
+
+```{r}
+BaseballFinal$EVDiff <- round(BaseballFinal$EV2020 - BaseballFinal$EV2019, 2)
+
+BaseballFinal$LADiff <- round(BaseballFinal$LA2020 - BaseballFinal$LA2019, 2)
+
+BaseballFinal$HRperABDiff <- round(BaseballFinal$AvgHrPerAB2020 - BaseballFinal$AvgHrPerAB2019, 2)
+```
+
+# Select only relevant columns
+
+```{r}
+BaseballFinal <- BaseballFinal %>%
+  select(1,8,9,10)
+```
+
+# Created a binary variable for Avg HR Diff
+```{r}
+BaseballFinal$AvgHR <- if_else(BaseballFinal$HRperABDiff < 0, "Decreased", "Increased")
+
+BaseballFinal$AvgHR <- as.factor(BaseballFinal$AvgHR)
+```
+
+
+# Created 3 scatterplotts
+
+```{r}
+
+library(plotly)
+
+ggplot(BaseballFinal, aes(x=EVDiff, y=HRperABDiff)) + geom_point(aes(color=AvgHR)) + geom_smooth() + scale_color_manual(values = c("red", "green")) + theme_minimal()
+
+ggplot(BaseballFinal, aes(x=LADiff, y=HRperABDiff)) + geom_point(aes(color=AvgHR)) + geom_smooth() + scale_color_manual(values = c("red", "green")) + theme_minimal()
+
+ggplotBB3 <- ggplot(BaseballFinal, aes(text = paste("Player Name:", Name, "<br>Change in HR per AB ratio:", HRperABDiff, "<br>Change in Avg EV:", EVDiff, "<br>Change in Avg LA:", LADiff, "<br>Avg HR:", AvgHR), x=EVDiff, y=LADiff, color = AvgHR)) + geom_point() + scale_color_manual(values = c("red", "green")) + ggtitle("Effects of Launch Angle and Exit Velocity", subtitle = "Source: Baseball Savant") + theme_minimal()
+
+ggplotly(ggplotBB3, tooltip = "text")
+
+
+
+```
+
